@@ -21,7 +21,6 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -111,39 +110,35 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
 /* USER CODE BEGIN 1 */
 
-extern void getCommand(int8_t command)
+extern void getCommand(int8_t * pcommand, uint8_t size_of_array)
 {
-	uint8_t command_buffer[4];
+	uint8_t command_buffer[] = {0, 0, 0, 0};
 	uint8_t current_index = 0;
 
-	uint8_t buffer[10];
-	uint8_t run = 1;
+	uint8_t char_received;
+	command_status_e status = CMD_IN_PROGRESS;
 
 
 	// Obtention de la command sur l'uart
-	while(run)
+	while(status == CMD_IN_PROGRESS)
 	{
-		HAL_UART_Receive(&huart2, buffer, sizeof(buffer), 1000);
-		uint8_t i;
-
-		for(i = 0; i < 10; i++)
+		if(HAL_UART_Receive(&huart2, char_received, 1, 1000) == HAL_OK)
 		{
-			if (buffer[i] != '\0')
-			{
-				switch (buffer[i]) {
-					case 0x0D:
-						command_buffer[current_index] = buffer[i];
-						run = 0;
+			switch (char_received) {
+			case 0x0D:
+				run = CMD_READY;
+				break;
 
-					default:
-						command_buffer[current_index] = buffer[i];
-						//current_index++;
-						if(current_index > 4) run = 0;
-					break;
-				}
+			default:
+				command_buffer[current_index] = char_received;
+				current_index++;
+				if(current_index >= size_of_array) run = CMD_FAILED;
+				break;
 			}
 		}
 	}
+
+
 
 	//parsing en une commande
 /*

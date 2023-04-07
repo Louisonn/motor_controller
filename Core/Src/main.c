@@ -122,8 +122,8 @@ int main(void)
   while (1)
   {
 	  UNUSED(uart_buffer);
-	  int8_t temp = 0;
-	  getCommand(temp);
+	  int8_t temp[4];
+	  getCommand(temp, 4);
 /*
 	  HAL_UART_Receive(&huart2, uart_buffer, sizeof(uart_buffer), 1000);
 

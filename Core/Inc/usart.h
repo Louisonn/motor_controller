@@ -36,12 +36,18 @@ extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
 
+typedef enum{
+	CMD_IN_PROGRESS = 0,
+	CMD_READY,
+	CMD_FAILED
+}command_status_e;
+
 /* USER CODE END Private defines */
 
 void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-extern void getCommand(int8_t);
+extern void getCommand(int8_t *, uint8_t);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
