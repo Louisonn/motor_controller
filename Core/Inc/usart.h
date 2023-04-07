@@ -47,7 +47,7 @@ typedef enum{
 void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-extern void getCommand(int8_t *, uint8_t);
+extern command_status_e getCommand(int8_t *, uint8_t);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

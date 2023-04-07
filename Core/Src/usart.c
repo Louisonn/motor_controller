@@ -110,9 +110,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
 /* USER CODE BEGIN 1 */
 
-extern void getCommand(int8_t * pcommand, uint8_t size_of_array)
+extern command_status_e getCommand(int8_t * pcommand, uint8_t size_of_array)
 {
-	uint8_t command_buffer[] = {0, 0, 0, 0};
+	uint8_t command_buffer[10];
 	uint8_t current_index = 0;
 
 	uint8_t char_received;
@@ -122,38 +122,35 @@ extern void getCommand(int8_t * pcommand, uint8_t size_of_array)
 	// Obtention de la command sur l'uart
 	while(status == CMD_IN_PROGRESS)
 	{
-		if(HAL_UART_Receive(&huart2, char_received, 1, 1000) == HAL_OK)
+		if(HAL_UART_Receive(&huart2, &char_received, 1, 1000) == HAL_OK)
 		{
-			switch (char_received) {
-			case 0x0D:
-				run = CMD_READY;
-				break;
-
-			default:
+			if(char_received != 0x0A)
+			{
 				command_buffer[current_index] = char_received;
 				current_index++;
-				if(current_index >= size_of_array) run = CMD_FAILED;
-				break;
+				if(current_index > 9) status = CMD_FAILED;
+				if(char_received == 0x0D) status = CMD_READY;
 			}
+//			switch (char_received) {
+//			case 0x0D:
+//				status = CMD_READY;
+//				break;
+//
+//			default:
+//				command_buffer[current_index] = char_received;
+//				current_index++;
+//				if(current_index >= size_of_array) status = CMD_FAILED;
+//				break;
+//			}
 		}
 	}
 
-
-
-	//parsing en une commande
-/*
-	if(buffer[0] == 0x7E && buffer[1] == '\r')
+	if (status == CMD_READY)
 	{
-
-	}
-	else if(buffer[0] == 0x7E && buffer[1] == '\r')
-	{
+		HAL_UART_Transmit(&huart2, command_buffer, 5, 1000);
 
 	}
 
-	if()*/
-
-
-
+	return status;
 }
 /* USER CODE END 1 */

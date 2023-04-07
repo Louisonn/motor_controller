@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define MSG_MAX_SIZE 4
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -122,8 +122,11 @@ int main(void)
   while (1)
   {
 	  UNUSED(uart_buffer);
-	  int8_t temp[4];
-	  getCommand(temp, 4);
+	  int8_t temp[MSG_MAX_SIZE];
+	  if (getCommand(temp, MSG_MAX_SIZE) == CMD_READY)
+	  {
+
+	  }
 /*
 	  HAL_UART_Receive(&huart2, uart_buffer, sizeof(uart_buffer), 1000);
 
