@@ -21,11 +21,11 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "moteurCC.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define MSG_MAX_SIZE 4
+#include <stdbool.h>
+#include "moteurCC.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -111,34 +111,53 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  moteurCC_init(&htim1, TIM_CHANNEL_1);
 
-  uint8_t uart_buffer[1];
+
+  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+
+  moteurCC_init(&htim1, TIM_CHANNEL_1);
+  bool is_running = false;
+  command_t command;
+  uint8_t MSG[20] = {'\0'};
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
-	  UNUSED(uart_buffer);
-	  int8_t temp[MSG_MAX_SIZE];
-	  if (getCommand(temp, MSG_MAX_SIZE) == CMD_READY)
+	  /*
+	  command = getCommand();
+	  if (is_running)
 	  {
+		  if(command.order == STOP)
+		  {
+			  is_running = false;
+			  break;
+		  }
 
+		  else if(command.order == SETSPEED)
+		  {
+			  moteurCC_consigne(command.value);
+		  }
 	  }
-/*
-	  HAL_UART_Receive(&huart2, uart_buffer, sizeof(uart_buffer), 1000);
 
-	  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-	  if (uart_buffer[0] != 0)
-		{
-			HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-			uart_buffer[0] = 0;
-			uart_buffer[1] = 0;
-			uart_buffer[2] = 0;
-			uart_buffer[3] = 0;
-		}*/
+	  else
+	  {
+		  if(command.order == START)
+		  {
+			  is_running = true;
+		  }
+	  }
+	  */
+		sprintf(MSG, "Encoder Ticks = %d\n\r", ((TIM2->CNT)>>2));
+		HAL_UART_Transmit(&huart2, MSG, sizeof(MSG), 100);
+		HAL_Delay(1000);
+
+
 	  //HAL_Delay(1000);
 	  //incremente();
 	  //moteurCC_consigne(pulse_width);
