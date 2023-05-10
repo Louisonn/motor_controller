@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdio.h>
 #include "moteurCC.h"
 /* USER CODE END Includes */
 
@@ -36,6 +37,15 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define START_MSG (int8_t)(0x7E)
+#define STOP_MSG (int8_t)(0x7F)
+#define MIN_SPEED_CMD (int8_t)(0x9C)
+#define MAX_SPEED_CMD (int8_t)(0x64)
+#define ZERO_SPEED_CMD (int8_t)(0x00)
+
+
+#define KP (0.5)
+#define KI (10)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,7 +56,20 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+  bool trigger_flag_500ms = false;
 
+  int32_t vitesse;
+  int32_t previous_tick_cnt = 0;
+  int32_t actual_tick_cnt;
+
+
+
+  int8_t consigne = 0;
+
+  int8_t error;
+  int8_t integrated_error = 0;
+
+  int8_t corrected_consigne = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,26 +80,22 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int sens = 0;
-int pulse_width = 50;
-static void incremente()
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (pulse_width > 100)
+	if(htim->Instance == TIM6)
 	{
-		sens = 1;
-	}
-	else if(pulse_width < -100)
-	{
-		sens = 0;
+	  trigger_flag_500ms = true;
 	}
 
-	if (!sens)
+	else if(htim->Instance == TIM7)
 	{
-		pulse_width += 10;
-	}
-	else
-	{
-		pulse_width -= 10;
+
+		  actual_tick_cnt = TIM2->CNT;
+
+		  vitesse = (actual_tick_cnt - previous_tick_cnt)*100/52;
+
+		  previous_tick_cnt = actual_tick_cnt;
 	}
 }
 /* USER CODE END 0 */
@@ -112,55 +131,69 @@ int main(void)
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
+  MX_TIM6_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
 
 
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
 
   moteurCC_init(&htim1, TIM_CHANNEL_1);
-  bool is_running = false;
-  command_t command;
-  uint8_t MSG[20] = {'\0'};
+
+  uint8_t MSG[15] = {0};
+
+
+  //buffer conservant l'octet recu en UART
+  int8_t buffer[1];
+
+  int8_t previous_buffer[1];
+  previous_buffer[0] = 0x00;
+
+  // variable d'etat du système
+  int8_t run = 1;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
   while (1)
   {
-	  /*
-	  command = getCommand();
-	  if (is_running)
+	  //655ms in reality
+	  if(trigger_flag_500ms)
 	  {
-		  if(command.order == STOP)
-		  {
-			  is_running = false;
-			  break;
-		  }
+		  //Affichage de la vitesse
+		  int n = sprintf(MSG,"%d\n\r", vitesse);
+		  for(; n<=sizeof(MSG);n++)MSG[n] = 0;
 
-		  else if(command.order == SETSPEED)
-		  {
-			  moteurCC_consigne(command.value);
-		  }
+		  HAL_UART_Transmit(&huart2, MSG, sizeof(MSG), 100);
+		  trigger_flag_500ms = false;
 	  }
 
-	  else
-	  {
-		  if(command.order == START)
-		  {
-			  is_running = true;
+
+	  HAL_UART_Receive(&huart2, (int8_t*)buffer, sizeof(buffer), 1000);
+
+	  if(buffer[0] == START_MSG){
+	  		  run = 1;
+	  	  }
+	  else if(buffer[0] == STOP_MSG){
+	  		  moteurCC_consigne(0);
+	  		  run = 0;
+	  	  }
+	  else if(buffer[0] >= MIN_SPEED_CMD && buffer[0] <= ZERO_SPEED_CMD){
+		  	  consigne = (int8_t)buffer[0];
+	  	  }
+	  else if(buffer[0] > ZERO_SPEED_CMD && buffer[0] <= MAX_SPEED_CMD){
+	  		  consigne = (int8_t)buffer[0];
+	  	  }
+
+	  if(run){
+		  if(buffer[0] != previous_buffer[0]){
+			  moteurCC_consigne(consigne);
+			  previous_buffer[0] = buffer[0];
 		  }
 	  }
-	  */
-		sprintf(MSG, "Encoder Ticks = %d\n\r", ((TIM2->CNT)>>2));
-		HAL_UART_Transmit(&huart2, MSG, sizeof(MSG), 100);
-		HAL_Delay(1000);
-
-
-	  //HAL_Delay(1000);
-	  //incremente();
-	  //moteurCC_consigne(pulse_width);
 
     /* USER CODE END WHILE */
 
